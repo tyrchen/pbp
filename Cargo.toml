@@ -1,33 +1,33 @@
 [package]
 authors = ["Without Boats <boats@mozilla.com>"]
 description = "bridge non-PGP system to PGP data format"
-edition = "2018"
+edition = "2021"
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 name = "pbp"
-version = "0.4.0"
+version = "0.5.0"
 repository = "https://github.com/withoutboats/pbp"
 
 [dependencies]
-base64 = "0.11"
-byteorder = "1"
-digest = "0.8"
-sha1 = "0.6"
-typenum = "1.11"
-failure = "0.1"
-bitflags = "1.2"
-rand = "0.6"
-sha2 = "0.8"
+base64 = "0.13.1"
+byteorder = "1.4.3"
+digest = "0.10.5"
+sha1 = "0.10.5"
+typenum = "1.15.0"
+failure = "0.1.8"
+bitflags = "1.3.2"
+rand = "0.8.5"
+sha2 = "0.10.6"
 
 [dependencies.ed25519-dalek]
-version = "0.9"
+version = "1.0.1"
 optional = true
 
 [features]
 dalek = ["ed25519-dalek"]
 
 [dev-dependencies]
-ed25519-dalek = "0.9"
+ed25519-dalek = "1.0.1"
 
 [[example]]
 required-features = ["dalek"]

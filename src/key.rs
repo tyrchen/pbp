@@ -180,12 +180,14 @@ impl PgpKey {
         Sha256: Digest<OutputSize = U32> + Default,
         Sha512: Digest<OutputSize = U64> + Default,
     {
+        use dalek::Signer;
+
         PgpKey::new::<Sha256, _>(
             keypair.public.as_bytes(),
             flags,
             user_id,
             unix_time,
-            |data| keypair.sign::<Sha512>(data).to_bytes(),
+            |data| keypair.sign(data).to_bytes(),
         )
     }
 
@@ -285,7 +287,8 @@ fn find_public_key_packet(data: &[u8]) -> Result<(&[u8], usize), PgpError> {
 fn fingerprint(key_packet: &[u8]) -> [u8; 20] {
     let mut hasher = Sha1::new();
     hasher.update(key_packet);
-    hasher.digest().bytes()
+    let result = hasher.finalize();
+    result.into()
 }
 
 fn is_ed25519_valid(packet: &[u8]) -> bool {

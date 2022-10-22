@@ -104,14 +104,14 @@ impl PgpSig {
             let hash = {
                 let mut hasher = Sha256::new();
 
-                hasher.input(data);
+                hasher.update(data);
 
-                hasher.input(&packet[3..]);
+                hasher.update(&packet[3..]);
 
-                hasher.input(&[0x04, 0xff]);
-                hasher.input(&bigendian_u32((packet.len() - 3) as u32));
+                hasher.update(&[0x04, 0xff]);
+                hasher.update(&bigendian_u32((packet.len() - 3) as u32));
 
-                hasher.result()
+                hasher.finalize()
             };
 
             write_subpackets(packet, |unhashed_subpackets| {
@@ -214,12 +214,12 @@ impl PgpSig {
             input(&mut hasher);
 
             let hashed_section = self.hashed_section();
-            hasher.input(hashed_section);
+            hasher.update(hashed_section);
 
-            hasher.input(&[0x04, 0xff]);
-            hasher.input(&bigendian_u32(hashed_section.len() as u32));
+            hasher.update(&[0x04, 0xff]);
+            hasher.update(&bigendian_u32(hashed_section.len() as u32));
 
-            hasher.result()
+            hasher.finalize()
         };
 
         verify(&hash[..], self.signature())
@@ -238,8 +238,10 @@ impl PgpSig {
         Sha256: Digest<OutputSize = U32> + Default,
         Sha512: Digest<OutputSize = U64> + Default,
     {
+        use dalek::Signer;
+
         PgpSig::new::<Sha256, _>(data, fingerprint, sig_type, timestamp, &[], |data| {
-            keypair.sign::<Sha512>(data).to_bytes()
+            keypair.sign(data).to_bytes()
         })
     }
 
@@ -257,9 +259,11 @@ impl PgpSig {
         Sha512: Digest<OutputSize = U64> + Default,
         F: FnOnce(&mut Sha256),
     {
+        use dalek::Verifier;
+
         self.verify::<Sha256, _, _>(input, |data, signature| {
             let sig = dalek::Signature::from_bytes(&signature).unwrap();
-            key.verify::<Sha512>(data, &sig).is_ok()
+            key.verify(data, &sig).is_ok()
         })
     }
 }
