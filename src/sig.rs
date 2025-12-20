@@ -1,6 +1,5 @@
 use std::fmt::{self, Debug, Display};
 use std::str::FromStr;
-use std::u16;
 
 use byteorder::{BigEndian, ByteOrder};
 use digest::Digest;
@@ -11,10 +10,10 @@ use ed25519_dalek as dalek;
 #[cfg(feature = "dalek")]
 use typenum::U64;
 
-use crate::ascii_armor::{ascii_armor, remove_ascii_armor};
-use crate::packet::*;
 use crate::Base64;
 use crate::PgpError;
+use crate::ascii_armor::{ascii_armor, remove_ascii_armor};
+use crate::packet::*;
 use crate::{Fingerprint, Signature};
 
 /// The valid types of OpenPGP signatures.
@@ -108,8 +107,8 @@ impl PgpSig {
 
                 hasher.update(&packet[3..]);
 
-                hasher.update(&[0x04, 0xff]);
-                hasher.update(&bigendian_u32((packet.len() - 3) as u32));
+                hasher.update([0x04, 0xff]);
+                hasher.update(bigendian_u32((packet.len() - 3) as u32));
 
                 hasher.finalize()
             };
@@ -164,7 +163,7 @@ impl PgpSig {
         let init = self.data.len() - 68;
         let sig_data = &self.data[init..];
         let mut sig = [0; 64];
-        sig[00..32].clone_from_slice(&sig_data[02..34]);
+        sig[0..32].clone_from_slice(&sig_data[2..34]);
         sig[32..64].clone_from_slice(&sig_data[36..68]);
         sig
     }
@@ -216,8 +215,8 @@ impl PgpSig {
             let hashed_section = self.hashed_section();
             hasher.update(hashed_section);
 
-            hasher.update(&[0x04, 0xff]);
-            hasher.update(&bigendian_u32(hashed_section.len() as u32));
+            hasher.update([0x04, 0xff]);
+            hasher.update(bigendian_u32(hashed_section.len() as u32));
 
             hasher.finalize()
         };
@@ -226,9 +225,9 @@ impl PgpSig {
     }
 
     #[cfg(feature = "dalek")]
-    /// Convert this signature from an ed25519-dalek signature.
+    /// Convert this signature from an ed25519-dalek SigningKey.
     pub fn from_dalek<Sha256, Sha512>(
-        keypair: &dalek::Keypair,
+        signing_key: &dalek::SigningKey,
         data: &[u8],
         fingerprint: Fingerprint,
         sig_type: SigType,
@@ -241,19 +240,19 @@ impl PgpSig {
         use dalek::Signer;
 
         PgpSig::new::<Sha256, _>(data, fingerprint, sig_type, timestamp, &[], |data| {
-            keypair.sign(data).to_bytes()
+            signing_key.sign(data).to_bytes()
         })
     }
 
     #[cfg(feature = "dalek")]
     /// Convert this signature to an ed25519-dalek signature.
     pub fn to_dalek(&self) -> dalek::Signature {
-        dalek::Signature::from_bytes(&self.signature()).unwrap()
+        dalek::Signature::from_bytes(&self.signature())
     }
 
     #[cfg(feature = "dalek")]
-    /// Verify this signature against an ed25519-dalek public key.
-    pub fn verify_dalek<Sha256, Sha512, F>(&self, key: &dalek::PublicKey, input: F) -> bool
+    /// Verify this signature against an ed25519-dalek VerifyingKey.
+    pub fn verify_dalek<Sha256, Sha512, F>(&self, key: &dalek::VerifyingKey, input: F) -> bool
     where
         Sha256: Digest<OutputSize = U32> + Default,
         Sha512: Digest<OutputSize = U64> + Default,
@@ -262,7 +261,7 @@ impl PgpSig {
         use dalek::Verifier;
 
         self.verify::<Sha256, _, _>(input, |data, signature| {
-            let sig = dalek::Signature::from_bytes(&signature).unwrap();
+            let sig = dalek::Signature::from_bytes(&signature);
             key.verify(data, &sig).is_ok()
         })
     }
@@ -346,7 +345,7 @@ fn has_correct_structure(packet: &[u8]) -> Result<(), PgpError> {
         return Err(PgpError::UnsupportedSignaturePacket);
     }
 
-    if !(packet[0] == 04 && packet[2] == 22 && packet[3] == 08) {
+    if !(packet[0] == 4 && packet[2] == 22 && packet[3] == 8) {
         return Err(PgpError::UnsupportedSignaturePacket);
     }
 

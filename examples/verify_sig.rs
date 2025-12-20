@@ -1,12 +1,9 @@
-extern crate pbp;
-extern crate sha2;
-
 use std::env;
 use std::fs;
 use std::path::PathBuf;
 
+use digest::Digest;
 use pbp::{PgpKey, PgpSig};
-use sha2::Digest;
 use sha2::{Sha256, Sha512};
 
 fn main() {
@@ -21,7 +18,7 @@ fn main() {
     let key = PgpKey::from_ascii_armor(&key).unwrap();
 
     if sig.verify_dalek::<Sha256, Sha512, _>(&key.to_dalek().unwrap(), |hasher| {
-        hasher.input(&data);
+        hasher.update(&data);
     }) {
         println!("Verified signature.");
     } else {

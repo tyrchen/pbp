@@ -1,7 +1,6 @@
 use std::fmt::{self, Debug, Display};
 use std::ops::Range;
 use std::str::FromStr;
-use std::u16;
 
 use byteorder::{BigEndian, ByteOrder};
 use digest::Digest;
@@ -13,9 +12,9 @@ use ed25519_dalek as dalek;
 #[cfg(feature = "dalek")]
 use typenum::U64;
 
+use crate::Base64;
 use crate::ascii_armor::{ascii_armor, remove_ascii_armor};
 use crate::packet::*;
-use crate::Base64;
 
 use crate::PgpError;
 use crate::{Fingerprint, KeyFlags, Signature};
@@ -169,9 +168,9 @@ impl PgpKey {
     }
 
     #[cfg(feature = "dalek")]
-    /// Create a PgpKey from a dalek Keypair and a user_id string.
+    /// Create a PgpKey from a dalek SigningKey and a user_id string.
     pub fn from_dalek<Sha256, Sha512>(
-        keypair: &dalek::Keypair,
+        signing_key: &dalek::SigningKey,
         flags: KeyFlags,
         unix_time: u32,
         user_id: &str,
@@ -183,20 +182,20 @@ impl PgpKey {
         use dalek::Signer;
 
         PgpKey::new::<Sha256, _>(
-            keypair.public.as_bytes(),
+            signing_key.verifying_key().as_bytes(),
             flags,
             user_id,
             unix_time,
-            |data| keypair.sign(data).to_bytes(),
+            |data| signing_key.sign(data).to_bytes(),
         )
     }
 
     #[cfg(feature = "dalek")]
-    /// Convert this key into a dalek PublicKey.
+    /// Convert this key into a dalek VerifyingKey.
     ///
     /// This will validate that the key data is a correct ed25519 public key.
-    pub fn to_dalek(&self) -> Result<dalek::PublicKey, dalek::SignatureError> {
-        dalek::PublicKey::from_bytes(self.key_data())
+    pub fn to_dalek(&self) -> Result<dalek::VerifyingKey, dalek::SignatureError> {
+        dalek::VerifyingKey::from_bytes(self.key_data().try_into().unwrap())
     }
 }
 
@@ -295,6 +294,6 @@ fn is_ed25519_valid(packet: &[u8]) -> bool {
     packet.len() == 51
         && packet[0] == 0x04
         && packet[5] == 0x16
-        && &packet[6..16] == CURVE
-        && &packet[16..19] == &[0x01, 0x07, 0x40]
+        && packet[6..16] == *CURVE
+        && packet[16..19] == [0x01, 0x07, 0x40]
 }

@@ -1,5 +1,4 @@
 use std::ops::Range;
-use std::u16;
 
 use byteorder::{BigEndian, ByteOrder};
 
@@ -53,7 +52,7 @@ pub(crate) fn write_single_subpacket<F: Fn(&mut Vec<u8>)>(packet: &mut Vec<u8>, 
 
 pub(crate) fn write_mpi(data: &mut Vec<u8>, mpi: &[u8]) {
     assert!(mpi.len() < (u16::MAX / 8) as usize);
-    assert!(mpi.len() > 0);
+    assert!(!mpi.is_empty());
     let len = bigendian_u16((mpi.len() * 8 - (mpi[0].leading_zeros() as usize)) as u16);
     data.extend(&len);
     data.extend(mpi);
